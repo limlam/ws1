@@ -37,8 +37,7 @@ public class FileTransferService extends IntentService {
     }
 
     /*
-     * (non-Javadoc)
-     * @see android.app.IntentService#onHandleIntent(android.content.Intent)
+     * After selecting an image file, this is meant to send local image file to socket client
      */
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -64,7 +63,7 @@ public class FileTransferService extends IntentService {
                 } catch (FileNotFoundException e) {
                     Log.d(WiFiDirectActivity.TAG, e.toString());
                 }
-                DeviceDetailFragment.copyFile(is, stream);
+                Utils.copyFile(is, stream);
                 Log.d(WiFiDirectActivity.TAG, "Client: Data written");
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());

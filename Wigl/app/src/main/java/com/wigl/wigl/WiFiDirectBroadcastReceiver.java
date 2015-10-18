@@ -80,6 +80,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             }
             Log.d(WiFiDirectActivity.TAG, "P2P peers changed");
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
+            Log.d(WiFiDirectActivity.TAG, "P2P connection changed");
 
             if (manager == null) {
                 return;
@@ -101,6 +102,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
                 activity.resetData();
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+            Log.d(WiFiDirectActivity.TAG, "P2P this device changed");
             DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager()
                     .findFragmentById(R.id.frag_list);
             fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(

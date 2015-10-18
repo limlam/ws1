@@ -104,6 +104,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                     }
                 });
 
+        /**
+         * This will become the "capture Wigl" button.  Here, we must send a file to slave devices that will contain:
+         *
+         * <ul>
+         * <li>capture time (unix timestamp)</li>
+         * <li>exposure settings</li>
+         * </ul>
+         *
+         */
         mContentView.findViewById(R.id.btn_start_client).setOnClickListener(
                 new View.OnClickListener() {
 
@@ -120,6 +129,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         return mContentView;
     }
 
+    /**
+     * Executes following startActivityForResult(Intent.ACTION_GET_CONTENT#image/*).
+     * <p>
+     * It currently starts a service with intent meant for FileTransferService to send a file over sockets.
+     * </p>
+     */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
@@ -159,7 +174,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // The owner IP is now known.
         TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(getResources().getString(R.string.group_owner_text)
-                + ((info.isGroupOwner == true) ? getResources().getString(R.string.yes)
+                + ((info.isGroupOwner) ? getResources().getString(R.string.yes)
                 : getResources().getString(R.string.no)));
 
         // InetAddress from WifiP2pInfo struct.
@@ -227,6 +242,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             this.statusText = (TextView) statusText;
         }
 
+        /**
+         * Accept incoming image file from Socket, save to local disk
+         */
         @Override
         protected String doInBackground(Void... params) {
             try {
@@ -245,7 +263,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                 Log.d(WiFiDirectActivity.TAG, "server: copying files " + f.toString());
                 InputStream inputstream = client.getInputStream();
-                copyFile(inputstream, new FileOutputStream(f));
+                Utils.copyFile(inputstream, new FileOutputStream(f));
                 serverSocket.close();
                 server_running = false;
                 return f.getAbsolutePath();
@@ -256,8 +274,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
         /*
-         * (non-Javadoc)
-         * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
+         * Once a file has been asynchronously transferred, do this
          */
         @Override
         protected void onPostExecute(String result) {
@@ -282,22 +299,4 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
     }
-
-    public static boolean copyFile(InputStream inputStream, OutputStream out) {
-        byte buf[] = new byte[1024];
-        int len;
-        try {
-            while ((len = inputStream.read(buf)) != -1) {
-                out.write(buf, 0, len);
-
-            }
-            out.close();
-            inputStream.close();
-        } catch (IOException e) {
-            Log.d(WiFiDirectActivity.TAG, e.toString());
-            return false;
-        }
-        return true;
-    }
-
 }

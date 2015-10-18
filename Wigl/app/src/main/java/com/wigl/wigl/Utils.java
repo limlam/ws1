@@ -3,6 +3,8 @@ package com.wigl.wigl;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -98,5 +100,21 @@ public class Utils {
             ipAddrStr += ipAddr[i]&0xFF;
         }
         return ipAddrStr;
+    }
+
+    public static boolean copyFile(InputStream inputStream, OutputStream out) {
+        byte buf[] = new byte[1024];
+        int len;
+        try {
+            while ((len = inputStream.read(buf)) != -1) {
+                out.write(buf, 0, len);
+            }
+            out.close();
+            inputStream.close();
+        } catch (IOException e) {
+            Log.d(WiFiDirectActivity.TAG, e.toString());
+            return false;
+        }
+        return true;
     }
 }
