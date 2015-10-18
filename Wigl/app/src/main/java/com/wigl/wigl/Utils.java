@@ -11,6 +11,8 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.util.Log;
 
 public class Utils {
@@ -116,5 +118,12 @@ public class Utils {
             return false;
         }
         return true;
+    }
+
+    public static Intent createCaptureIntent(Activity activity, long captureTime) {
+        Intent intent = new Intent(activity, CaptureActivity.class);
+        intent.setAction(CaptureActivity.ACTION_CAPTURE);
+        intent.putExtra(CaptureActivity.CAPTURE_TIME, captureTime);
+        return intent;
     }
 }

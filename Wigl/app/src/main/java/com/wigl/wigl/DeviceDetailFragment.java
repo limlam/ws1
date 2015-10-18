@@ -19,14 +19,12 @@ package com.wigl.wigl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.wifi.WpsInfo;
@@ -34,9 +32,8 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager.ConnectionInfoListener;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,16 +47,16 @@ import com.wigl.wigl.DeviceListFragment.DeviceActionListener;
  * i.e. setting up network connection and transferring data.
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
+    private static final long DELAY = 5000;
 
     public static final String IP_SERVER = "192.168.49.1";
-    public static int PORT = 8988;
-    private static boolean server_running = false;
 
-    protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private View mContentView = null;
     private WifiP2pDevice device;
     private WifiP2pInfo info;
     ProgressDialog progressDialog = null;
+
+    private long captureTime;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -118,49 +115,67 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                     @Override
                     public void onClick(View v) {
-                        // Allow user to pick an image from Gallery or other
-                        // registered apps
-                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                        intent.setType("image/*");
-                        startActivityForResult(intent, CHOOSE_FILE_RESULT_CODE);
+                        Uri uri = createAndSaveWiglCaptureFile();
+
+                        TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
+                        statusText.setText("Sending: " + uri);
+                        Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
+
+                        // Transfer file to group owner i.e peer using FileTransferClient.
+                        Intent serviceIntent = createFileTransferIntent(uri);
+                        getActivity().startService(serviceIntent);
+
+                        // For now assume the FileTransferClient is successful.  Maybe in the future have it send back a Result via LocalBroadcastManager
+                        Intent caputreIntent = Utils.createCaptureIntent(getActivity(), captureTime);
+                        getActivity().startActivityForResult(caputreIntent, 0);
                     }
                 });
 
         return mContentView;
     }
 
+    private Uri createAndSaveWiglCaptureFile() {
+        String filename = "wiglM-" + System.currentTimeMillis();
+        File file = new File(getActivity().getFilesDir(), filename);
+        try {
+            FileOutputStream os = new FileOutputStream(file);
+            os.write(getCaptureTimestampAsBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return Uri.fromFile(file);
+    }
+
+    private byte[] getCaptureTimestampAsBytes() {
+        captureTime = System.currentTimeMillis() + DELAY;
+        Log.d(WiFiDirectActivity.TAG, "**** captureTime: " + captureTime);
+        return String.format("%d", captureTime).getBytes();
+    }
+
+    @NonNull
+    private Intent createFileTransferIntent(Uri uri) {
+        Intent intent = new Intent(getActivity(), FileTransferClient.class);
+        intent.setAction(FileTransferClient.ACTION_SEND_FILE);
+        intent.putExtra(FileTransferClient.EXTRAS_FILE_PATH, uri.toString());
+        intent.putExtra(FileTransferClient.EXTRAS_ADDRESS, getHostIp());
+        intent.putExtra(FileTransferClient.EXTRAS_PORT, FileTransferServer.PORT);
+        return intent;
+    }
+
+    private String getHostIp() {
+        String local = Utils.getLocalIPAddress();
+        // Trick to find the ip in the file /proc/net/arp
+        String client_mac_fixed = new String(device.deviceAddress).replace("99", "19");
+        String client = Utils.getIPFromMac(client_mac_fixed);
+        return local.equals(IP_SERVER) ? client : IP_SERVER;
+    }
+
     /**
-     * Executes following startActivityForResult(Intent.ACTION_GET_CONTENT#image/*).
-     * <p>
-     * It currently starts a service with intent meant for FileTransferService to send a file over sockets.
-     * </p>
+     * Executes after startActivityForResult(CaptureActivity.ACTION_CAPTURE)
      */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-
-        String localIP = Utils.getLocalIPAddress();
-        // Trick to find the ip in the file /proc/net/arp
-        String client_mac_fixed = new String(device.deviceAddress).replace("99", "19");
-        String clientIP = Utils.getIPFromMac(client_mac_fixed);
-
-        // User has picked an image. Transfer it to group owner i.e peer using
-        // FileTransferService.
-        Uri uri = data.getData();
-        TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
-        statusText.setText("Sending: " + uri);
-        Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
-        Intent serviceIntent = new Intent(getActivity(), FileTransferService.class);
-        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
-        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
-
-        if(localIP.equals(IP_SERVER)){
-            serviceIntent.putExtra(FileTransferService.EXTRAS_ADDRESS, clientIP);
-        }else{
-            serviceIntent.putExtra(FileTransferService.EXTRAS_ADDRESS, IP_SERVER);
-        }
-
-        serviceIntent.putExtra(FileTransferService.EXTRAS_PORT, PORT);
-        getActivity().startService(serviceIntent);
+        // after capturing photo, do something
     }
 
     @Override
@@ -169,24 +184,22 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             progressDialog.dismiss();
         }
         this.info = info;
-        this.getView().setVisibility(View.VISIBLE);
+        this.getView().setVisibility(View.VISIBLE); // brings into view the DeviceDetail panel
+        // in the future, bring up the camera preview activity instead
 
         // The owner IP is now known.
         TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(getResources().getString(R.string.group_owner_text)
                 + ((info.isGroupOwner) ? getResources().getString(R.string.yes)
                 : getResources().getString(R.string.no)));
-
-        // InetAddress from WifiP2pInfo struct.
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
+        if (info.isGroupOwner) {
+            view = (TextView) mContentView.findViewById(R.id.group_ip);
+            view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
+        }
 
         mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
 
-        if (!server_running){
-            new ServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text)).execute();
-            server_running = true;
-        }
+        new FileTransferServer(getActivity(), mContentView.findViewById(R.id.status_text)).execute();
 
         // hide the connect button
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
@@ -204,7 +217,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         view.setText(device.deviceAddress);
         view = (TextView) mContentView.findViewById(R.id.device_info);
         view.setText(device.toString());
-
     }
 
     /**
@@ -222,81 +234,5 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         view.setText(R.string.empty);
         mContentView.findViewById(R.id.btn_start_client).setVisibility(View.GONE);
         this.getView().setVisibility(View.GONE);
-    }
-
-    /**
-     * A simple server socket that accepts connection and writes some data on
-     * the stream.
-     */
-    public static class ServerAsyncTask extends AsyncTask<Void, Void, String> {
-
-        private final Context context;
-        private final TextView statusText;
-
-        /**
-         * @param context
-         * @param statusText
-         */
-        public ServerAsyncTask(Context context, View statusText) {
-            this.context = context;
-            this.statusText = (TextView) statusText;
-        }
-
-        /**
-         * Accept incoming image file from Socket, save to local disk
-         */
-        @Override
-        protected String doInBackground(Void... params) {
-            try {
-                ServerSocket serverSocket = new ServerSocket(PORT);
-                Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
-                Socket client = serverSocket.accept();
-                Log.d(WiFiDirectActivity.TAG, "Server: connection done");
-                final File f = new File(Environment.getExternalStorageDirectory() + "/"
-                        + context.getPackageName() + "/wifip2pshared-" + System.currentTimeMillis()
-                        + ".jpg");
-
-                File dirs = new File(f.getParent());
-                if (!dirs.exists())
-                    dirs.mkdirs();
-                f.createNewFile();
-
-                Log.d(WiFiDirectActivity.TAG, "server: copying files " + f.toString());
-                InputStream inputstream = client.getInputStream();
-                Utils.copyFile(inputstream, new FileOutputStream(f));
-                serverSocket.close();
-                server_running = false;
-                return f.getAbsolutePath();
-            } catch (IOException e) {
-                Log.e(WiFiDirectActivity.TAG, e.getMessage());
-                return null;
-            }
-        }
-
-        /*
-         * Once a file has been asynchronously transferred, do this
-         */
-        @Override
-        protected void onPostExecute(String result) {
-            if (result != null) {
-                Log.d(WiFiDirectActivity.TAG, "File copied: " + result);
-                statusText.setText("File copied - " + result);
-                Intent intent = new Intent();
-                intent.setAction(android.content.Intent.ACTION_VIEW);
-                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
-                context.startActivity(intent);
-            }
-
-        }
-
-        /*
-         * (non-Javadoc)
-         * @see android.os.AsyncTask#onPreExecute()
-         */
-        @Override
-        protected void onPreExecute() {
-            statusText.setText("Opening a server socket");
-        }
-
     }
 }

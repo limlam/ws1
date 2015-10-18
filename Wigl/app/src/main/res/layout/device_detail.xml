@@ -3,14 +3,14 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="fill_parent"
-    android:background="@drawable/details_view"
+    android:layout_height="match_parent"
     android:visibility="gone">
     <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@android:color/black">
         <LinearLayout
             xmlns:android="http://schemas.android.com/apk/res/android"
             android:orientation="horizontal"
@@ -21,28 +21,25 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/connect_peer_button"
-                android:layout_marginLeft="5px"
-                android:layout_marginRight="5px"
+                android:layout_margin="10px"
                 android:background="@android:color/white"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="@android:color/black" />
             <Button
                 android:id="@+id/btn_disconnect"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/disconnect_peer_button"
-                android:layout_marginLeft="5px"
-                android:layout_marginRight="5px"
+                android:layout_margin="10px"
                 android:background="@android:color/white"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="@android:color/black" />
             <Button
                 android:id="@+id/btn_start_client"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/get_file_button"
-                android:layout_marginLeft="5px"
-                android:layout_marginRight="5px"
+                android:layout_margin="10px"
                 android:background="@android:color/white"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="@android:color/black"
                 android:visibility="gone" />
         </LinearLayout>
         <TextView
@@ -72,8 +69,8 @@
         android:orientation="vertical"
         android:layout_gravity="bottom"
         android:layout_height="37dp"
-        android:layout_marginBottom="3dp"
-        android:background="@android:color/holo_orange_dark">
+        android:layout_marginBottom="0dp"
+        android:background="@android:color/darker_gray">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

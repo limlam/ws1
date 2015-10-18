@@ -20,7 +20,7 @@ import android.util.Log;
  * A service that process each file transfer request i.e Intent by opening a
  * socket connection with the WiFi Direct Group Owner and writing the file
  */
-public class FileTransferService extends IntentService {
+public class FileTransferClient extends IntentService {
 
     private static final int SOCKET_TIMEOUT = 5000;
     public static final String ACTION_SEND_FILE = "com.wigl.wigl.SEND_FILE";
@@ -28,16 +28,16 @@ public class FileTransferService extends IntentService {
     public static final String EXTRAS_ADDRESS = "go_host";
     public static final String EXTRAS_PORT = "go_port";
 
-    public FileTransferService(String name) {
+    public FileTransferClient(String name) {
         super(name);
     }
 
-    public FileTransferService() {
-        super("FileTransferService");
+    public FileTransferClient() {
+        super("FileTransferClient");
     }
 
     /*
-     * After selecting an image file, this is meant to send local image file to socket client
+     * After identifying a file, this is going to send that local file to WiFi P2P client
      */
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -48,6 +48,8 @@ public class FileTransferService extends IntentService {
             String host = intent.getExtras().getString(EXTRAS_ADDRESS);
             Socket socket = new Socket();
             int port = intent.getExtras().getInt(EXTRAS_PORT);
+            OutputStream os = null;
+            InputStream is = null;
 
             try {
                 Log.d(WiFiDirectActivity.TAG, "Opening client socket - ");
@@ -55,15 +57,10 @@ public class FileTransferService extends IntentService {
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
 
                 Log.d(WiFiDirectActivity.TAG, "Client socket - " + socket.isConnected());
-                OutputStream stream = socket.getOutputStream();
+                os = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
-                InputStream is = null;
-                try {
-                    is = cr.openInputStream(Uri.parse(fileUri));
-                } catch (FileNotFoundException e) {
-                    Log.d(WiFiDirectActivity.TAG, e.toString());
-                }
-                Utils.copyFile(is, stream);
+                is = cr.openInputStream(Uri.parse(fileUri));
+                Utils.copyFile(is, os);
                 Log.d(WiFiDirectActivity.TAG, "Client: Data written");
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
@@ -77,6 +74,20 @@ public class FileTransferService extends IntentService {
                             e.printStackTrace();
                         }
                     }
+                }
+
+                try {
+                    if (is != null)
+                        is.close();
+                } catch (IOException e) {
+                    Log.e(WiFiDirectActivity.TAG, "Error closing InputStream" + e.getMessage());
+                }
+
+                try {
+                    if (os != null)
+                        os.close();
+                } catch (IOException e) {
+                    Log.e(WiFiDirectActivity.TAG, "Error closing OutputStream" + e.getMessage());
                 }
             }
 
