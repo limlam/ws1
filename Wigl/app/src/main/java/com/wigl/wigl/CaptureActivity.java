@@ -2,19 +2,26 @@ package com.wigl.wigl;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Camera;
-import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.ViewGroup;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class CaptureActivity extends Activity {
     private static final String TAG = "CaptureActivity";
@@ -24,12 +31,23 @@ public class CaptureActivity extends Activity {
     public static final String CAPTURE_TIME = "com.wigl.wigl.CAPTURE_TIME";
 
     private Camera mCamera;
-    private SurfaceView mPreview;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.capture);
+
+        Log.d(TAG, "**** calling activity: " + getCallingActivity());
+        Log.d(TAG, "**** calling package: " + getCallingPackage());
+
+        long captureTime = getIntent().getLongExtra(CAPTURE_TIME, 0);
+        Log.d(TAG, "CaptureActivity.onCreate captureTime: " + captureTime);
+        if (captureTime > 0) {
+            TimerTask task = new CaptureTimer();
+            new Timer().schedule(task, captureTime - System.currentTimeMillis());
+        } else {
+            Log.e(TAG, "Capture time was not extracted from intent");
+        }
     }
 
     @Override
@@ -43,9 +61,11 @@ public class CaptureActivity extends Activity {
 
         if (safeCameraOpen(0)) {
             // Create our Preview view and set it as the content of our activity.
-            mPreview = new CameraPreview(this, mCamera);
+            SurfaceView mPreview = new CameraPreview(this, mCamera);
             FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
             preview.addView(mPreview);
+
+            setupCrosshair();
         }
     }
 
@@ -86,7 +106,7 @@ public class CaptureActivity extends Activity {
         }
     }
 
-    public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+    private class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
         private SurfaceHolder mHolder;
         private Camera mCamera;
 
@@ -165,5 +185,97 @@ public class CaptureActivity extends Activity {
             }
             camera.setDisplayOrientation(result);
         }
+    }
+    
+    private class CaptureTimer extends TimerTask {
+        @Override
+        public void run() {
+            mCamera.takePicture(null, null, getJpeg());
+        }
+    }
+
+    @NonNull
+    private Camera.PictureCallback getJpeg() {
+        return new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                File pictureFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "wiglPic-" + System.currentTimeMillis() + ".jpg");
+                if (pictureFile == null) {
+                    Log.e(TAG, "Error creating media file");
+                    return;
+                }
+
+                try {
+                    FileOutputStream fos = new FileOutputStream(pictureFile);
+                    fos.write(data);
+                    fos.close();
+                    Log.d(TAG, "File created: " + pictureFile.getAbsolutePath());
+
+                    Intent resultData = new Intent();
+                    resultData.setData(Uri.fromFile(pictureFile));
+                    setResult(RESULT_OK, resultData);
+                    Log.d(TAG, "Result set");
+                    finish();
+                } catch (FileNotFoundException e) {
+                    Log.d(TAG, "File not found: " + e.getMessage());
+                } catch (IOException e) {
+                    Log.d(TAG, "Error accessing file: " + e.getMessage());
+                }
+            }
+        };
+    }
+
+    private void setupCrosshair() {
+
+        (findViewById(R.id.crosshair_center)).bringToFront();
+
+        float tickLength = getResources().getDimension(R.dimen.crosshair_tick_length);
+        float tickWidth = getResources().getDimension(R.dimen.crosshair_tick_width);
+        float cornerDistance = getResources().getDimension(R.dimen.corner_distance);
+        float cornerDistancePrime = cornerDistance - (tickLength / 2) + tickWidth;
+
+        View crosshair_br = findViewById(R.id.crosshair_br);
+        crosshair_br.setTranslationX(cornerDistancePrime);
+        crosshair_br.setTranslationY(cornerDistance);
+        crosshair_br.bringToFront();
+
+        View crosshair_rb = findViewById(R.id.crosshair_rb);
+        crosshair_rb.setRotation(90);
+        crosshair_rb.setTranslationX(cornerDistance);
+        crosshair_rb.setTranslationY(cornerDistancePrime);
+        crosshair_rb.bringToFront();
+
+        View crosshair_bl = findViewById(R.id.crosshair_bl);
+        crosshair_bl.setTranslationX(-cornerDistancePrime);
+        crosshair_bl.setTranslationY(cornerDistance);
+        crosshair_bl.bringToFront();
+
+        View crosshair_lb = findViewById(R.id.crosshair_lb);
+        crosshair_lb.setRotation(90);
+        crosshair_lb.setTranslationX(-cornerDistance);
+        crosshair_lb.setTranslationY(cornerDistancePrime);
+        crosshair_lb.bringToFront();
+
+        View crosshair_tr = findViewById(R.id.crosshair_tr);
+        crosshair_tr.setTranslationX(cornerDistancePrime);
+        crosshair_tr.setTranslationY(-cornerDistance);
+        crosshair_tr.bringToFront();
+
+        View crosshair_rt = findViewById(R.id.crosshair_rt);
+        crosshair_rt.setRotation(90);
+        crosshair_rt.setTranslationX(cornerDistance);
+        crosshair_rt.setTranslationY(-cornerDistancePrime);
+        crosshair_rt.bringToFront();
+
+        View crosshair_tl = findViewById(R.id.crosshair_tl);
+        crosshair_tl.setTranslationX(-cornerDistancePrime);
+        crosshair_tl.setTranslationY(-cornerDistance);
+        crosshair_tl.bringToFront();
+
+        View crosshair_lt = findViewById(R.id.crosshair_lt);
+        crosshair_lt.setRotation(90);
+        crosshair_lt.setTranslationX(-cornerDistance);
+        crosshair_lt.setTranslationY(-cornerDistancePrime);
+        crosshair_lt.bringToFront();
     }
 }

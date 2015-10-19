@@ -55,8 +55,8 @@ public class FileTransferClient extends IntentService {
                 Log.d(WiFiDirectActivity.TAG, "Opening client socket - ");
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
-
                 Log.d(WiFiDirectActivity.TAG, "Client socket - " + socket.isConnected());
+
                 os = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
                 is = cr.openInputStream(Uri.parse(fileUri));

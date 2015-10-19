@@ -1,7 +1,9 @@
 package com.wigl.wigl;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -16,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Timer;
 
 /**
  * A simple server socket that accepts connection and writes some data on
@@ -25,11 +26,13 @@ import java.util.Timer;
 public class FileTransferServer extends AsyncTask<Void, Void, String> {
     public static final int PORT = 8988;
 
+    private final Fragment fragment;
     private final Activity activity;
     private final TextView statusText;
 
-    public FileTransferServer(Activity activity, View statusText) {
-        this.activity = activity;
+    public FileTransferServer(Fragment fragment, View statusText) {
+        this.fragment = fragment;
+        this.activity = fragment.getActivity();
         this.statusText = (TextView) statusText;
     }
 
@@ -73,13 +76,13 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             Log.d(WiFiDirectActivity.TAG, "File copied: " + result);
             statusText.setText("File copied: " + result);
 
-            Intent intent = Utils.createCaptureIntent(activity, calculateDelayFromFile(result));
-            activity.startActivityForResult(intent, 0);
+            Intent intent = Utils.createCaptureIntent(activity, getCaptureTime(result));
+            fragment.startActivityForResult(intent, 0);
         }
     }
 
-    private long calculateDelayFromFile(String result) {
-        Uri uri = Uri.parse("file://" + result);
+    private long getCaptureTime(String filename) {
+        Uri uri = Uri.parse("file://" + filename);
         ContentResolver cr = activity.getContentResolver();
         InputStream is = null;
         ByteArrayOutputStream byteBuffer = null;
@@ -101,9 +104,9 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             byte[] bytes = byteBuffer.toByteArray();
             byteBuffer.close();
             String timestamp = new String(bytes);
-            long ts = Long.parseLong(timestamp);
-            Log.d(WiFiDirectActivity.TAG, "**** timestamp: " + ts);
-            return ts - System.currentTimeMillis();
+            long captureTime = Long.parseLong(timestamp);
+            Log.d(WiFiDirectActivity.TAG, "**** timestamp: " + captureTime);
+            return captureTime;
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {

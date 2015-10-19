@@ -19,10 +19,7 @@ package com.wigl.wigl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
 
-import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -43,8 +40,8 @@ import android.widget.TextView;
 import com.wigl.wigl.DeviceListFragment.DeviceActionListener;
 
 /**
- * A fragment that manages a particular peer and allows interaction with device
- * i.e. setting up network connection and transferring data.
+ * A fragment that manages a particular peer and allows interaction with device i.e. setting up
+ * network connection and transferring data.
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
     private static final long DELAY = 5000;
@@ -65,10 +62,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
         mContentView = inflater.inflate(R.layout.device_detail, null);
-        mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
 
+        mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 WifiP2pConfig config = new WifiP2pConfig();
@@ -110,7 +106,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
          * </ul>
          *
          */
-        mContentView.findViewById(R.id.btn_start_client).setOnClickListener(
+        mContentView.findViewById(R.id.btn_start_wigl).setOnClickListener(
                 new View.OnClickListener() {
 
                     @Override
@@ -122,12 +118,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
 
                         // Transfer file to group owner i.e peer using FileTransferClient.
-                        Intent serviceIntent = createFileTransferIntent(uri);
-                        getActivity().startService(serviceIntent);
+                        Intent clientFileTransfer = createFileTransferClientIntent(uri);
+                        getActivity().startService(clientFileTransfer);
 
                         // For now assume the FileTransferClient is successful.  Maybe in the future have it send back a Result via LocalBroadcastManager
-                        Intent caputreIntent = Utils.createCaptureIntent(getActivity(), captureTime);
-                        getActivity().startActivityForResult(caputreIntent, 0);
+                        Intent capture = Utils.createCaptureIntent(getActivity(), captureTime);
+                        startActivityForResult(capture, 0);
                     }
                 });
 
@@ -153,7 +149,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     }
 
     @NonNull
-    private Intent createFileTransferIntent(Uri uri) {
+    private Intent createFileTransferClientIntent(Uri uri) {
         Intent intent = new Intent(getActivity(), FileTransferClient.class);
         intent.setAction(FileTransferClient.ACTION_SEND_FILE);
         intent.putExtra(FileTransferClient.EXTRAS_FILE_PATH, uri.toString());
@@ -175,9 +171,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // after capturing photo, do something
+        Uri pictureFile = data.getData();
+        Log.i(WiFiDirectActivity.TAG, "We can see you, " + pictureFile);
     }
 
+    /**
+     * This gets executed on the device that did not initiate connect
+     */
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
         if (progressDialog != null && progressDialog.isShowing()) {
@@ -197,9 +197,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
         }
 
-        mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
+        mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.VISIBLE);
 
-        new FileTransferServer(getActivity(), mContentView.findViewById(R.id.status_text)).execute();
+        new FileTransferServer(this, mContentView.findViewById(R.id.status_text)).execute();
 
         // hide the connect button
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
@@ -232,7 +232,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         view.setText(R.string.empty);
         view = (TextView) mContentView.findViewById(R.id.status_text);
         view.setText(R.string.empty);
-        mContentView.findViewById(R.id.btn_start_client).setVisibility(View.GONE);
+        mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.GONE);
         this.getView().setVisibility(View.GONE);
     }
 }

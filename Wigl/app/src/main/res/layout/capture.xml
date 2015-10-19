@@ -1,17 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
+    android:layout_height="fill_parent"
+    android:orientation="vertical">
     <FrameLayout
         android:id="@+id/camera_preview"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_weight="1" />
+        android:layout_weight="1" >
+
+        <View
+            android:id="@+id/crosshair_center"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs_dot" />
+
+        <View
+            android:id="@+id/crosshair_br"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_rb"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_bl"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_lb"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_tr"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_rt"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_tl"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+        <View
+            android:id="@+id/crosshair_lt"
+            android:layout_width="@dimen/crosshair_tick_length"
+            android:layout_height="@dimen/crosshair_tick_length"
+            android:layout_gravity="center"
+            android:background="@drawable/crosshairs"/>
+
+    </FrameLayout>
 
     <Button
         android:id="@+id/button_capture"
-        android:text="Capture"
+        android:text="Does nothing for now"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center" />

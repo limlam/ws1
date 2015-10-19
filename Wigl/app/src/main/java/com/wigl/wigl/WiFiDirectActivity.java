@@ -161,6 +161,9 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                     }
                 });
                 return true;
+            case R.id.test_capture:
+                startActivity(Utils.createCaptureIntent(this, 0));
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
