@@ -16,10 +16,6 @@
 
 package com.wigl.wigl;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -39,20 +35,22 @@ import android.widget.TextView;
 
 import com.wigl.wigl.DeviceListFragment.DeviceActionListener;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 /**
  * A fragment that manages a particular peer and allows interaction with device i.e. setting up
  * network connection and transferring data.
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
-    private static final long DELAY = 5000;
-
     public static final String IP_SERVER = "192.168.49.1";
-
+    private static final String TAG = "DeviceDetailFragment";
+    private static final long DELAY = 5000;
+    ProgressDialog progressDialog = null;
     private View mContentView = null;
     private WifiP2pDevice device;
     private WifiP2pInfo info;
-    ProgressDialog progressDialog = null;
-
     private long captureTime;
 
     @Override
@@ -73,15 +71,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 if (progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
-                progressDialog = ProgressDialog.show(getActivity(), "Press back to cancel",
+                progressDialog = ProgressDialog.show(getActivity(), "WiFi P2P magic",
                         "Connecting to :" + device.deviceAddress, true, true
-                        //                        new DialogInterface.OnCancelListener() {
-                        //
-                        //                            @Override
-                        //                            public void onCancel(DialogInterface dialog) {
-                        //                                ((DeviceActionListener) getActivity()).cancelDisconnect();
-                        //                            }
-                        //                        }
                 );
                 ((DeviceActionListener) getActivity()).connect(config);
 
@@ -93,6 +84,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                     @Override
                     public void onClick(View v) {
+                        resetViews();
                         ((DeviceActionListener) getActivity()).disconnect();
                     }
                 });
@@ -115,7 +107,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                         TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
                         statusText.setText("Sending: " + uri);
-                        Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
+                        Log.d(TAG, "Intent: " + uri);
 
                         // Transfer file to group owner i.e peer using FileTransferClient.
                         Intent clientFileTransfer = createFileTransferClientIntent(uri);
@@ -144,7 +136,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     private byte[] getCaptureTimestampAsBytes() {
         captureTime = System.currentTimeMillis() + DELAY;
-        Log.d(WiFiDirectActivity.TAG, "**** captureTime: " + captureTime);
+        Log.d(TAG, "**** captureTime: " + captureTime);
         return String.format("%d", captureTime).getBytes();
     }
 
@@ -172,11 +164,11 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Uri pictureFile = data.getData();
-        Log.i(WiFiDirectActivity.TAG, "We can see you, " + pictureFile);
+        Log.i(TAG, "We can see you, " + pictureFile);
     }
 
     /**
-     * This gets executed on the device that did not initiate connect
+     * This gets executed on the device that initiated "connect"
      */
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
@@ -184,18 +176,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             progressDialog.dismiss();
         }
         this.info = info;
-        this.getView().setVisibility(View.VISIBLE); // brings into view the DeviceDetail panel
+        getView().setVisibility(View.VISIBLE); // brings into view the DeviceDetail panel
         // in the future, bring up the camera preview activity instead
 
         // The owner IP is now known.
         TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
-        view.setText(getResources().getString(R.string.group_owner_text)
-                + ((info.isGroupOwner) ? getResources().getString(R.string.yes)
-                : getResources().getString(R.string.no)));
-        if (info.isGroupOwner) {
-            view = (TextView) mContentView.findViewById(R.id.group_ip);
-            view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
-        }
+        view.setText(String.format(getString(R.string.group_owner_text), info.isGroupOwner));
+
+        view = (TextView) mContentView.findViewById(R.id.group_ip);
+        view.setText(String.format(getString(R.string.group_ip_text), info.groupOwnerAddress.getHostAddress()));
 
         mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.VISIBLE);
 
@@ -212,7 +201,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      */
     public void showDetails(WifiP2pDevice device) {
         this.device = device;
-        this.getView().setVisibility(View.VISIBLE);
+        getView().setVisibility(View.VISIBLE);
         TextView view = (TextView) mContentView.findViewById(R.id.device_address);
         view.setText(device.deviceAddress);
         view = (TextView) mContentView.findViewById(R.id.device_info);
@@ -230,9 +219,11 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         view.setText(R.string.empty);
         view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(R.string.empty);
+        view = (TextView) mContentView.findViewById(R.id.group_ip);
+        view.setText(R.string.empty);
         view = (TextView) mContentView.findViewById(R.id.status_text);
         view.setText(R.string.empty);
         mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.GONE);
-        this.getView().setVisibility(View.GONE);
+        getView().setVisibility(View.GONE);
     }
 }

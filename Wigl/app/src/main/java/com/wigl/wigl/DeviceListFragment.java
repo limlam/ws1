@@ -37,38 +37,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A ListFragment that displays available peers on discovery and requests the
- * parent activity to handle user interaction events
+ * A ListFragment that displays available peers on discovery and requests the parent activity to
+ * handle user interaction events
  */
 public class DeviceListFragment extends ListFragment implements PeerListListener {
+    private static final String TAG = "DeviceListFragment";
 
-    private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     ProgressDialog progressDialog = null;
     View mContentView = null;
+    private List<WifiP2pDevice> peers = new ArrayList<>();
     private WifiP2pDevice device;
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        this.setListAdapter(new WiFiPeerListAdapter(getActivity(), R.layout.row_devices, peers));
-
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        mContentView = inflater.inflate(R.layout.device_list, null);
-        return mContentView;
-    }
-
-    /**
-     * @return this device
-     */
-    public WifiP2pDevice getDevice() {
-        return device;
-    }
-
     private static String getDeviceStatus(int deviceStatus) {
-        Log.d(WiFiDirectActivity.TAG, "Peer status :" + deviceStatus);
+        Log.d(TAG, "Peer status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -82,8 +63,23 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
                 return "Unavailable";
             default:
                 return "Unknown";
-
         }
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        this.setListAdapter(new WiFiPeerListAdapter(getActivity(), R.layout.row_devices, peers));
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        mContentView = inflater.inflate(R.layout.device_list, null);
+        return mContentView;
+    }
+
+    public WifiP2pDevice getDevice() {
+        return device;
     }
 
     /**
@@ -96,53 +92,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     }
 
     /**
-     * Array adapter for ListFragment that maintains WifiP2pDevice list.
-     */
-    private class WiFiPeerListAdapter extends ArrayAdapter<WifiP2pDevice> {
-
-        private List<WifiP2pDevice> items;
-
-        /**
-         * @param context
-         * @param textViewResourceId
-         * @param objects
-         */
-        public WiFiPeerListAdapter(Context context, int textViewResourceId,
-                                   List<WifiP2pDevice> objects) {
-            super(context, textViewResourceId, objects);
-            items = objects;
-
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View v = convertView;
-            if (v == null) {
-                LayoutInflater vi = (LayoutInflater) getActivity().getSystemService(
-                        Context.LAYOUT_INFLATER_SERVICE);
-                v = vi.inflate(R.layout.row_devices, null);
-            }
-            WifiP2pDevice device = items.get(position);
-            if (device != null) {
-                TextView top = (TextView) v.findViewById(R.id.device_name);
-                TextView bottom = (TextView) v.findViewById(R.id.device_details);
-                if (top != null) {
-                    top.setText(device.deviceName);
-                }
-                if (bottom != null) {
-                    bottom.setText(getDeviceStatus(device.status));
-                }
-            }
-
-            return v;
-
-        }
-    }
-
-    /**
      * Update UI for this device.
-     *
-     * @param device WifiP2pDevice object
      */
     public void updateThisDevice(WifiP2pDevice device) {
         this.device = device;
@@ -161,8 +111,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         peers.addAll(peerList.getDeviceList());
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
         if (peers.size() == 0) {
-            Log.d(WiFiDirectActivity.TAG, "No devices found");
-            return;
+            Log.d(TAG, "No devices found");
         }
 
     }
@@ -172,9 +121,6 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
     }
 
-    /**
-     *
-     */
     public void onInitiateDiscovery() {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -190,18 +136,56 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     }
 
     /**
-     * An interface-callback for the activity to listen to fragment interaction
-     * events.
+     * An interface-callback for the activity to listen to fragment interaction events.
      */
     public interface DeviceActionListener {
 
+        // communicating data from a click in DeviceListFragment to display data in DeviceDetailFragment
         void showDetails(WifiP2pDevice device);
 
-        void cancelDisconnect();
-
+        // connect request from DeviceDetailFragment to WiFiDirectActivity
         void connect(WifiP2pConfig config);
 
+        // disconnect request from DeviceDetailFragment to WiFiDirectActivity
         void disconnect();
+    }
+
+    /**
+     * Array adapter for ListFragment that maintains WifiP2pDevice list.
+     */
+    private class WiFiPeerListAdapter extends ArrayAdapter<WifiP2pDevice> {
+
+        private List<WifiP2pDevice> items;
+
+        public WiFiPeerListAdapter(Context context, int textViewResourceId,
+                                   List<WifiP2pDevice> objects) {
+            super(context, textViewResourceId, objects);
+            items = objects;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View v = convertView;
+            if (v == null) {
+                LayoutInflater vi = (LayoutInflater) getActivity().getSystemService(
+                        Context.LAYOUT_INFLATER_SERVICE);
+                v = vi.inflate(R.layout.row_devices, null);
+            }
+            WifiP2pDevice device = items.get(position);
+            if (device != null) {
+                TextView name = (TextView) v.findViewById(R.id.device_name);
+                if (name != null) {
+                    name.setText(device.deviceName);
+                }
+                TextView details = (TextView) v.findViewById(R.id.device_details);
+                if (details != null) {
+                    details.setText(getDeviceStatus(device.status));
+                }
+            }
+
+            return v;
+
+        }
     }
 
 }

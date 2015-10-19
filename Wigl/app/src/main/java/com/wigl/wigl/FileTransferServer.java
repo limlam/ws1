@@ -24,6 +24,8 @@ import java.net.Socket;
  * the stream.
  */
 public class FileTransferServer extends AsyncTask<Void, Void, String> {
+    private static final String TAG = "FileTransferServer";
+
     public static final int PORT = 8988;
 
     private final Fragment fragment;
@@ -48,18 +50,18 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
     protected String doInBackground(Void... params) {
         try {
             ServerSocket serverSocket = new ServerSocket(PORT);
-            Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
+            Log.d(TAG, "Server: Socket opened");
             Socket client = serverSocket.accept();
-            Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+            Log.d(TAG, "Server: connection done");
             final File f = new File(activity.getFilesDir(), "wiglS-" + System.currentTimeMillis());
 
-            Log.d(WiFiDirectActivity.TAG, "server: copying files " + f.toString());
+            Log.d(TAG, "server: copying files " + f.toString());
             InputStream inputstream = client.getInputStream();
             Utils.copyFile(inputstream, new FileOutputStream(f));
             serverSocket.close();
             return f.getAbsolutePath();
         } catch (IOException e) {
-            Log.e(WiFiDirectActivity.TAG, e.getMessage());
+            Log.e(TAG, e.getMessage());
             return null;
         }
     }
@@ -73,7 +75,7 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             // read the contents of the file for the Wigl capture timestamp
             // start CaptureFragment with capture at specified time
 
-            Log.d(WiFiDirectActivity.TAG, "File copied: " + result);
+            Log.d(TAG, "File copied: " + result);
             statusText.setText("File copied: " + result);
 
             Intent intent = Utils.createCaptureIntent(activity, getCaptureTime(result));
@@ -105,7 +107,7 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             byteBuffer.close();
             String timestamp = new String(bytes);
             long captureTime = Long.parseLong(timestamp);
-            Log.d(WiFiDirectActivity.TAG, "**** timestamp: " + captureTime);
+            Log.d(TAG, "**** timestamp: " + captureTime);
             return captureTime;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -114,14 +116,14 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
                 if (is != null)
                     is.close();
             } catch (IOException e) {
-                Log.e(WiFiDirectActivity.TAG, "Error closing InputStream" + e.getMessage());
+                Log.e(TAG, "Error closing InputStream" + e.getMessage());
             }
 
             try {
                 if (byteBuffer != null)
                     byteBuffer.close();
             } catch (IOException e) {
-                Log.e(WiFiDirectActivity.TAG, "Error closing ByteArrayOutputStream" + e.getMessage());
+                Log.e(TAG, "Error closing ByteArrayOutputStream" + e.getMessage());
             }
         }
     }

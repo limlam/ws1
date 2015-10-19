@@ -21,6 +21,7 @@ import android.util.Log;
  * socket connection with the WiFi Direct Group Owner and writing the file
  */
 public class FileTransferClient extends IntentService {
+    private static final String TAG = "FileTransferClient";
 
     private static final int SOCKET_TIMEOUT = 5000;
     public static final String ACTION_SEND_FILE = "com.wigl.wigl.SEND_FILE";
@@ -52,18 +53,18 @@ public class FileTransferClient extends IntentService {
             InputStream is = null;
 
             try {
-                Log.d(WiFiDirectActivity.TAG, "Opening client socket - ");
+                Log.d(TAG, "Opening client socket - ");
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
-                Log.d(WiFiDirectActivity.TAG, "Client socket - " + socket.isConnected());
+                Log.d(TAG, "Client socket - " + socket.isConnected());
 
                 os = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
                 is = cr.openInputStream(Uri.parse(fileUri));
                 Utils.copyFile(is, os);
-                Log.d(WiFiDirectActivity.TAG, "Client: Data written");
+                Log.d(TAG, "Client: Data written");
             } catch (IOException e) {
-                Log.e(WiFiDirectActivity.TAG, e.getMessage());
+                Log.e(TAG, e.getMessage());
             } finally {
                 if (socket != null) {
                     if (socket.isConnected()) {
@@ -80,14 +81,14 @@ public class FileTransferClient extends IntentService {
                     if (is != null)
                         is.close();
                 } catch (IOException e) {
-                    Log.e(WiFiDirectActivity.TAG, "Error closing InputStream" + e.getMessage());
+                    Log.e(TAG, "Error closing InputStream" + e.getMessage());
                 }
 
                 try {
                     if (os != null)
                         os.close();
                 } catch (IOException e) {
-                    Log.e(WiFiDirectActivity.TAG, "Error closing OutputStream" + e.getMessage());
+                    Log.e(TAG, "Error closing OutputStream" + e.getMessage());
                 }
             }
 
