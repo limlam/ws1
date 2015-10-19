@@ -44,7 +44,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     private static final String TAG = "DeviceListFragment";
 
     ProgressDialog progressDialog = null;
-    View mContentView = null;
+    View mView = null;
     private List<WifiP2pDevice> peers = new ArrayList<>();
     private WifiP2pDevice device;
 
@@ -74,8 +74,8 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        mContentView = inflater.inflate(R.layout.device_list, null);
-        return mContentView;
+        mView = inflater.inflate(R.layout.device_list, container);
+        return mView;
     }
 
     public WifiP2pDevice getDevice() {
@@ -96,9 +96,9 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
      */
     public void updateThisDevice(WifiP2pDevice device) {
         this.device = device;
-        TextView view = (TextView) mContentView.findViewById(R.id.my_name);
+        TextView view = (TextView) mView.findViewById(R.id.my_name);
         view.setText(device.deviceName);
-        view = (TextView) mContentView.findViewById(R.id.my_status);
+        view = (TextView) mView.findViewById(R.id.my_status);
         view.setText(getDeviceStatus(device.status));
     }
 

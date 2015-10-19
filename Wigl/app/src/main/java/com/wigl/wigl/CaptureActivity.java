@@ -37,22 +37,14 @@ public class CaptureActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.capture);
 
-        Log.d(TAG, "**** calling activity: " + getCallingActivity());
-        Log.d(TAG, "**** calling package: " + getCallingPackage());
-
         long captureTime = getIntent().getLongExtra(CAPTURE_TIME, 0);
         Log.d(TAG, "CaptureActivity.onCreate captureTime: " + captureTime);
         if (captureTime > 0) {
             TimerTask task = new CaptureTimer();
             new Timer().schedule(task, captureTime - System.currentTimeMillis());
         } else {
-            Log.e(TAG, "Capture time was not extracted from intent");
+            Log.d(TAG, "Capture time was not set; must be in Capture preview mode");
         }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
     }
 
     @Override
@@ -75,16 +67,6 @@ public class CaptureActivity extends Activity {
         releaseCameraAndPreview();
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     private boolean safeCameraOpen(int id) {
         boolean qOpened = false;
 
@@ -92,7 +74,7 @@ public class CaptureActivity extends Activity {
             mCamera = Camera.open(id);
             qOpened = (mCamera != null);
         } catch (Exception e) {
-            Log.e(getString(R.string.app_name), "failed to open Camera");
+            Log.e(TAG, "failed to open Camera");
             e.printStackTrace();
         }
 
@@ -158,7 +140,6 @@ public class CaptureActivity extends Activity {
             try {
                 mCamera.setPreviewDisplay(mHolder);
                 mCamera.startPreview();
-
             } catch (Exception e){
                 Log.d(TAG, "Error starting camera preview: " + e.getMessage());
             }
@@ -199,16 +180,17 @@ public class CaptureActivity extends Activity {
         return new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
+                Log.d(TAG, "Picture captured");
                 File pictureFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "wiglPic-" + System.currentTimeMillis() + ".jpg");
                 if (pictureFile == null) {
                     Log.e(TAG, "Error creating media file");
                     return;
                 }
 
+                FileOutputStream os = null;
                 try {
-                    FileOutputStream fos = new FileOutputStream(pictureFile);
-                    fos.write(data);
-                    fos.close();
+                    os = new FileOutputStream(pictureFile);
+                    os.write(data);
                     Log.d(TAG, "File created: " + pictureFile.getAbsolutePath());
 
                     Intent resultData = new Intent();
@@ -220,6 +202,8 @@ public class CaptureActivity extends Activity {
                     Log.d(TAG, "File not found: " + e.getMessage());
                 } catch (IOException e) {
                     Log.d(TAG, "Error accessing file: " + e.getMessage());
+                } finally {
+                    Utils.close(os);
                 }
             }
         };

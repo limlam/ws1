@@ -1,6 +1,7 @@
 package com.wigl.wigl;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +22,7 @@ public class Utils {
 
     private final static String p2pInt = "p2p-p2p0";
 
-    public static String getIPFromMac(String MAC) {
+    public static String getIpFromMac(String MAC) {
 		/*
 		 * method modified from:
 		 * 
@@ -126,5 +127,14 @@ public class Utils {
         intent.setAction(CaptureActivity.ACTION_CAPTURE);
         intent.putExtra(CaptureActivity.CAPTURE_TIME, captureTime);
         return intent;
+    }
+
+    public static void close(Closeable c) {
+        try {
+            if (c != null)
+                c.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -46,9 +46,9 @@ import java.io.IOException;
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
     public static final String IP_SERVER = "192.168.49.1";
     private static final String TAG = "DeviceDetailFragment";
-    private static final long DELAY = 5000;
+    private static final long CAPTURE_DELAY = 5000;
     ProgressDialog progressDialog = null;
-    private View mContentView = null;
+    private View mView = null;
     private WifiP2pDevice device;
     private WifiP2pInfo info;
     private long captureTime;
@@ -60,26 +60,26 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        mContentView = inflater.inflate(R.layout.device_detail, null);
+        mView = inflater.inflate(R.layout.device_detail, container);
 
-        mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
+        mView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                WifiP2pConfig config = new WifiP2pConfig();
-                config.deviceAddress = device.deviceAddress;
-                config.wps.setup = WpsInfo.PBC;
                 if (progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
                 progressDialog = ProgressDialog.show(getActivity(), "WiFi P2P magic",
                         "Connecting to :" + device.deviceAddress, true, true
                 );
-                ((DeviceActionListener) getActivity()).connect(config);
 
+                WifiP2pConfig config = new WifiP2pConfig();
+                config.deviceAddress = device.deviceAddress;
+                config.wps.setup = WpsInfo.PBC;
+                ((DeviceActionListener) getActivity()).connect(config);
             }
         });
 
-        mContentView.findViewById(R.id.btn_disconnect).setOnClickListener(
+        mView.findViewById(R.id.btn_disconnect).setOnClickListener(
                 new View.OnClickListener() {
 
                     @Override
@@ -98,14 +98,14 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
          * </ul>
          *
          */
-        mContentView.findViewById(R.id.btn_start_wigl).setOnClickListener(
+        mView.findViewById(R.id.btn_start_wigl).setOnClickListener(
                 new View.OnClickListener() {
 
                     @Override
                     public void onClick(View v) {
                         Uri uri = createAndSaveWiglCaptureFile();
 
-                        TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
+                        TextView statusText = (TextView) mView.findViewById(R.id.status_text);
                         statusText.setText("Sending: " + uri);
                         Log.d(TAG, "Intent: " + uri);
 
@@ -119,7 +119,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                     }
                 });
 
-        return mContentView;
+        return mView;
     }
 
     private Uri createAndSaveWiglCaptureFile() {
@@ -135,7 +135,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     }
 
     private byte[] getCaptureTimestampAsBytes() {
-        captureTime = System.currentTimeMillis() + DELAY;
+        captureTime = System.currentTimeMillis() + CAPTURE_DELAY;
         Log.d(TAG, "**** captureTime: " + captureTime);
         return String.format("%d", captureTime).getBytes();
     }
@@ -145,17 +145,17 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         Intent intent = new Intent(getActivity(), FileTransferClient.class);
         intent.setAction(FileTransferClient.ACTION_SEND_FILE);
         intent.putExtra(FileTransferClient.EXTRAS_FILE_PATH, uri.toString());
-        intent.putExtra(FileTransferClient.EXTRAS_ADDRESS, getHostIp());
+        intent.putExtra(FileTransferClient.EXTRAS_HOST, getServerIp());
         intent.putExtra(FileTransferClient.EXTRAS_PORT, FileTransferServer.PORT);
         return intent;
     }
 
-    private String getHostIp() {
+    private String getServerIp() {
         String local = Utils.getLocalIPAddress();
         // Trick to find the ip in the file /proc/net/arp
-        String client_mac_fixed = new String(device.deviceAddress).replace("99", "19");
-        String client = Utils.getIPFromMac(client_mac_fixed);
-        return local.equals(IP_SERVER) ? client : IP_SERVER;
+        String other_mac_fixed = new String(device.deviceAddress).replace("99", "19");
+        String other = Utils.getIpFromMac(other_mac_fixed);
+        return local.equals(IP_SERVER) ? other : IP_SERVER;
     }
 
     /**
@@ -168,7 +168,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     }
 
     /**
-     * This gets executed on the device that initiated "connect"
+     * This gets executed on both devices after one of them initiates "connect".  In the future,
+     * bring up the camera preview activity instead (and possibly the Server)
      */
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
@@ -176,54 +177,46 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             progressDialog.dismiss();
         }
         this.info = info;
-        getView().setVisibility(View.VISIBLE); // brings into view the DeviceDetail panel
-        // in the future, bring up the camera preview activity instead
 
-        // The owner IP is now known.
-        TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
-        view.setText(String.format(getString(R.string.group_owner_text), info.isGroupOwner));
+        // UI information
+        TextView view = (TextView) mView.findViewById(R.id.group_owner);
+        view.setText(String.format(getString(R.string.group_owner_text), this.info.isGroupOwner));
 
-        view = (TextView) mContentView.findViewById(R.id.group_ip);
-        view.setText(String.format(getString(R.string.group_ip_text), info.groupOwnerAddress.getHostAddress()));
+        view = (TextView) mView.findViewById(R.id.group_ip);
+        view.setText(String.format(getString(R.string.group_ip_text), this.info.groupOwnerAddress.getHostAddress()));
 
-        mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.VISIBLE);
+        // UI visibility
+        mView.setVisibility(View.VISIBLE); // brings into view the DeviceDetail panel
+        mView.findViewById(R.id.btn_start_wigl).setVisibility(this.info.isGroupOwner ? View.GONE : View.VISIBLE);
+        mView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
 
-        new FileTransferServer(this, mContentView.findViewById(R.id.status_text)).execute();
-
-        // hide the connect button
-        mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
+        if (this.info.isGroupOwner) {
+            new FileTransferServer(this, mView.findViewById(R.id.status_text)).execute();
+            Log.d(TAG, "FileTransferServer started on background thread");
+        }
     }
 
     /**
      * Updates the UI with device data
-     *
-     * @param device the device to be displayed
      */
     public void showDetails(WifiP2pDevice device) {
         this.device = device;
+        ((TextView) mView.findViewById(R.id.device_address)).setText(device.deviceAddress);
+        ((TextView) mView.findViewById(R.id.device_info)).setText(device.toString());
         getView().setVisibility(View.VISIBLE);
-        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
-        view.setText(device.deviceAddress);
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText(device.toString());
     }
 
     /**
      * Clears the UI fields after a disconnect or direct mode disable operation.
      */
     public void resetViews() {
-        mContentView.findViewById(R.id.btn_connect).setVisibility(View.VISIBLE);
-        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.group_owner);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.group_ip);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.status_text);
-        view.setText(R.string.empty);
-        mContentView.findViewById(R.id.btn_start_wigl).setVisibility(View.GONE);
+        ((TextView) mView.findViewById(R.id.device_address)).setText(R.string.empty);
+        ((TextView) mView.findViewById(R.id.device_info)).setText(R.string.empty);
+        ((TextView) mView.findViewById(R.id.group_owner)).setText(R.string.empty);
+        ((TextView) mView.findViewById(R.id.group_ip)).setText(R.string.empty);
+        ((TextView) mView.findViewById(R.id.status_text)).setText(R.string.empty);
+        mView.findViewById(R.id.btn_connect).setVisibility(View.VISIBLE);
+        mView.findViewById(R.id.btn_start_wigl).setVisibility(View.GONE);
         getView().setVisibility(View.GONE);
     }
 }

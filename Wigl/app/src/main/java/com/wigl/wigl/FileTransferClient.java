@@ -2,7 +2,6 @@
 
 package com.wigl.wigl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,7 +25,7 @@ public class FileTransferClient extends IntentService {
     private static final int SOCKET_TIMEOUT = 5000;
     public static final String ACTION_SEND_FILE = "com.wigl.wigl.SEND_FILE";
     public static final String EXTRAS_FILE_PATH = "file_url";
-    public static final String EXTRAS_ADDRESS = "go_host";
+    public static final String EXTRAS_HOST = "go_host";
     public static final String EXTRAS_PORT = "go_port";
 
     public FileTransferClient(String name) {
@@ -42,54 +41,37 @@ public class FileTransferClient extends IntentService {
      */
     @Override
     protected void onHandleIntent(Intent intent) {
-
         Context context = getApplicationContext();
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
             String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
-            String host = intent.getExtras().getString(EXTRAS_ADDRESS);
-            Socket socket = new Socket();
+            String host = intent.getExtras().getString(EXTRAS_HOST);
             int port = intent.getExtras().getInt(EXTRAS_PORT);
+
+            Socket socket = new Socket();
             OutputStream os = null;
             InputStream is = null;
-
             try {
-                Log.d(TAG, "Opening client socket - ");
+                Log.d(TAG, "Opening client socket");
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
-                Log.d(TAG, "Client socket - " + socket.isConnected());
+                Log.d(TAG, "Client connected: " + socket.isConnected());
 
                 os = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
                 is = cr.openInputStream(Uri.parse(fileUri));
                 Utils.copyFile(is, os);
-                Log.d(TAG, "Client: Data written");
+                Log.d(TAG, "Client data written");
             } catch (IOException e) {
                 Log.e(TAG, e.getMessage());
             } finally {
                 if (socket != null) {
                     if (socket.isConnected()) {
-                        try {
-                            socket.close();
-                        } catch (IOException e) {
-                            // Give up
-                            e.printStackTrace();
-                        }
+                        Utils.close(socket);
                     }
                 }
 
-                try {
-                    if (is != null)
-                        is.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error closing InputStream" + e.getMessage());
-                }
-
-                try {
-                    if (os != null)
-                        os.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error closing OutputStream" + e.getMessage());
-                }
+                Utils.close(is);
+                Utils.close(os);
             }
 
         }

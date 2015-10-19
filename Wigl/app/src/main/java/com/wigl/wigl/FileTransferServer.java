@@ -3,7 +3,6 @@ package com.wigl.wigl;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -16,18 +15,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
- * A simple server socket that accepts connection and writes some data on
- * the stream.
+ * A simple server socket that accepts connection and writes some data on the stream.
  */
 public class FileTransferServer extends AsyncTask<Void, Void, String> {
-    private static final String TAG = "FileTransferServer";
-
     public static final int PORT = 8988;
-
+    private static final String TAG = "FileTransferServer";
     private final Fragment fragment;
     private final Activity activity;
     private final TextView statusText;
@@ -40,29 +37,40 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
 
     @Override
     protected void onPreExecute() {
-        statusText.setText("Opening a server socket");
+        Log.d(TAG, "Opening a ServerSocket");
+        statusText.setText("Opening a ServerSocket");
     }
 
     /**
-     * Accept incoming image file from Socket, save to local disk
+     * Accept incoming captureTime file from Socket, save to local disk
      */
     @Override
     protected String doInBackground(Void... params) {
+        ServerSocket serverSocket = null;
+        Socket client = null;
+        InputStream is = null;
+        OutputStream os = null;
+        String result = null;
         try {
-            ServerSocket serverSocket = new ServerSocket(PORT);
-            Log.d(TAG, "Server: Socket opened");
-            Socket client = serverSocket.accept();
-            Log.d(TAG, "Server: connection done");
+            Log.d(TAG, "Opening server socket");
+            serverSocket = new ServerSocket(PORT);
+            client = serverSocket.accept();
+            Log.d(TAG, "Client connection open");
             final File f = new File(activity.getFilesDir(), "wiglS-" + System.currentTimeMillis());
 
-            Log.d(TAG, "server: copying files " + f.toString());
-            InputStream inputstream = client.getInputStream();
-            Utils.copyFile(inputstream, new FileOutputStream(f));
-            serverSocket.close();
-            return f.getAbsolutePath();
+            is = client.getInputStream();
+            os = new FileOutputStream(f);
+            Utils.copyFile(is, os);
+            Log.d(TAG, "File copied");
+            result = f.getAbsolutePath();
         } catch (IOException e) {
             Log.e(TAG, e.getMessage());
-            return null;
+        } finally {
+            Utils.close(serverSocket);
+            Utils.close(client);
+            Utils.close(is);
+            Utils.close(os);
+            return result;
         }
     }
 
@@ -72,14 +80,16 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
     @Override
     protected void onPostExecute(String result) {
         if (result != null) {
-            // read the contents of the file for the Wigl capture timestamp
-            // start CaptureFragment with capture at specified time
-
-            Log.d(TAG, "File copied: " + result);
+            Log.d(TAG, "File on disk: " + result);
             statusText.setText("File copied: " + result);
 
+            // read the contents of the file for the Wigl capture timestamp
+            // start CaptureFragment with capture at specified time
             Intent intent = Utils.createCaptureIntent(activity, getCaptureTime(result));
             fragment.startActivityForResult(intent, 0);
+            Log.d(TAG, "Started CaptureActivity");
+
+            // TODO: delete file
         }
     }
 
@@ -88,6 +98,7 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
         ContentResolver cr = activity.getContentResolver();
         InputStream is = null;
         ByteArrayOutputStream byteBuffer = null;
+        long captureTime = 0;
         try {
             is = cr.openInputStream(uri);
             byteBuffer = new ByteArrayOutputStream();
@@ -106,11 +117,10 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             byte[] bytes = byteBuffer.toByteArray();
             byteBuffer.close();
             String timestamp = new String(bytes);
-            long captureTime = Long.parseLong(timestamp);
-            Log.d(TAG, "**** timestamp: " + captureTime);
-            return captureTime;
+            captureTime = Long.parseLong(timestamp);
+            Log.d(TAG, "**** Timestamp: " + captureTime);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            Log.e(TAG, "Error processing timestamp" + e.getStackTrace());
         } finally {
             try {
                 if (is != null)
@@ -125,6 +135,7 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
             } catch (IOException e) {
                 Log.e(TAG, "Error closing ByteArrayOutputStream" + e.getMessage());
             }
+            return captureTime;
         }
     }
 }
