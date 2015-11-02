@@ -25,6 +25,7 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager.ConnectionInfoListener;
+import android.nfc.Tag;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -165,6 +166,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Uri pictureFile = data.getData();
         Log.i(TAG, "We can see you, " + pictureFile);
+
+        if (!this.info.isGroupOwner) {
+            Log.d(TAG, "I'm not the group owner and I'll send the image I just took to group owner");
+            // Transfer picture to group owner i.e peer using FileTransferClient.
+            Intent clientFileTransfer = createFileTransferClientIntent(pictureFile);
+            getActivity().startService(clientFileTransfer);
+        } else {
+            ((WiFiDirectActivity) getActivity()).groupOwnerPicture(pictureFile);
+        }
     }
 
     /**

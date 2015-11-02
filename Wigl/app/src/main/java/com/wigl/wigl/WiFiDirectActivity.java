@@ -22,6 +22,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -38,6 +39,8 @@ import android.widget.Toast;
 
 import com.wigl.wigl.DeviceListFragment.DeviceActionListener;
 
+import java.util.concurrent.TimeoutException;
+
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available devices. WiFi
  * Direct APIs are asynchronous and rely on callback mechanism using interfaces to notify the
@@ -53,6 +56,9 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private boolean retryChannel = false;
     private Channel channel;
     private BroadcastReceiver receiver = null;
+
+    private String ownerPicture;
+    private String memberPicture;
 
     public void setIsWifiP2pEnabled(boolean isWifiP2pEnabled) {
         this.isWifiP2pEnabled = isWifiP2pEnabled;
@@ -182,6 +188,49 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
             }
 
         });
+    }
+
+    public void groupOwnerPicture(Uri pictureFile) {
+        Log.d(TAG, "Got owner picture: " + getFilesDir() + "/" + pictureFile.getLastPathSegment());
+        this.ownerPicture = getFilesDir() + "/" + pictureFile.getLastPathSegment();
+    }
+
+    public void groupMemberPicture(String pictureFile) {
+        Log.d(TAG, "Got member picture: " + pictureFile);
+        this.memberPicture = pictureFile;
+    }
+
+    public void showWigl() {
+        try {
+            AnimatedGifFragment frag_animation = (AnimatedGifFragment) getFragmentById(R.id.wigl_animation);
+            frag_animation.showWigl(retrieveOwnerPictureOrError(5000), retrieveMemberPictureOrError(5000));
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
+    private String retrieveOwnerPictureOrError(int timeout) throws TimeoutException, InterruptedException {
+        Log.d(TAG, "Starting to wait for owner picture");
+        while (timeout > 0) {
+            if (ownerPicture != null)
+                return ownerPicture;
+
+            Thread.sleep(100);
+            timeout -= 100;
+        }
+        throw new TimeoutException("Never received owner picture");
+    }
+
+    private String retrieveMemberPictureOrError(int timeout) throws TimeoutException, InterruptedException {
+        Log.d(TAG, "Starting to wait for member picture");
+        while (timeout > 0) {
+            if (memberPicture != null)
+                return memberPicture;
+
+            Thread.sleep(100);
+            timeout -= 100;
+        }
+        throw new TimeoutException("Never received member picture");
     }
 
     @Override

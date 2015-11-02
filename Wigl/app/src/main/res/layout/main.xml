@@ -26,5 +26,11 @@
             tools:layout="@layout/device_detail">
             <!-- Preview: layout=@layout/device_detail -->
         </fragment>
+        <fragment
+            class="com.wigl.wigl.AnimatedGifFragment"
+            android:id="@+id/wigl_animation"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:layout="@layout/animated_gif"/>
     </LinearLayout>
 </LinearLayout>

@@ -85,11 +85,18 @@ public class FileTransferServer extends AsyncTask<Void, Void, String> {
 
             // read the contents of the file for the Wigl capture timestamp
             // start CaptureFragment with capture at specified time
-            Intent intent = Utils.createCaptureIntent(activity, getCaptureTime(result));
-            fragment.startActivityForResult(intent, 0);
-            Log.d(TAG, "Started CaptureActivity");
+            long captureTime = getCaptureTime(result);
+            if (captureTime != 0) {
+                Intent intent = Utils.createCaptureIntent(activity, captureTime);
+                fragment.startActivityForResult(intent, 0);
+                Log.d(TAG, "Started CaptureActivity");
 
-            // TODO: delete file
+                // TODO: delete file
+            } else {
+                Log.d(TAG, "Received picture file");
+                ((WiFiDirectActivity) activity).groupMemberPicture(result);
+                ((WiFiDirectActivity) activity).showWigl();
+            }
         }
     }
 

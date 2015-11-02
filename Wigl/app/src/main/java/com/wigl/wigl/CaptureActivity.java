@@ -181,7 +181,7 @@ public class CaptureActivity extends Activity {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
                 Log.d(TAG, "Picture captured");
-                File pictureFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "wiglPic-" + System.currentTimeMillis() + ".jpg");
+                File pictureFile = new File(getFilesDir(), "wiglPic-" + System.currentTimeMillis());
                 if (pictureFile == null) {
                     Log.e(TAG, "Error creating media file");
                     return;
